@@ -26,14 +26,16 @@ spring:
         distance-type: cosine_distance # 语义搜索常用的余弦相似度
         dimensions: 1024      # text-embedding-v4 维度，如果更换了嵌入模型需要删除vector_store表重建
         initialize-schema: true  # 不填dimensions其实也可以，但是这样很多人换了模型不知道要修改dimensions，spring ai会自动初始化向量维度
-jimmer:
-  dialect: org.babyfish.jimmer.sql.dialect.PostgresDialect
-  show-sql: true
-  pretty-sql: true
-  language: kotlin
-  client:
-    ts:
-      path: /ts.zip
-    openapi:
-      path: /openapi
-      ui-path: /openapi-ui
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: io.github.qifan777.server
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: assign_uuid
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /openapi-ui

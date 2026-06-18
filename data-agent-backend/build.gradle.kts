@@ -1,17 +1,16 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
-    kotlin("jvm") version "2.3.0"
-    id("com.google.devtools.ksp") version "2.3.0"
+    java
     id("org.springframework.boot") version "3.5.12"
-    id("tech.argonariod.gradle-plugin-jimmer") version "latest.release"
+    id("io.spring.dependency-management") version "1.1.7"
 }
-apply(plugin = "io.spring.dependency-management")
 
 group = "io.github.qifan777"
 version = "1.0"
-jimmer {
-    version = "0.10.6"
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 }
 
 
@@ -23,16 +22,18 @@ dependencies {
     implementation("com.alibaba.cloud.ai:spring-ai-alibaba-graph-core:1.1.2.2")
     implementation("io.github.a2asdk:a2a-java-sdk-transport-jsonrpc:0.3.2.Final")
     implementation("io.projectreactor.netty:reactor-netty")
-    implementation("io.github.oshai:kotlin-logging-jvm:8.0.01")
+    implementation("com.baomidou:mybatis-plus-spring-boot3-starter:3.5.12")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.postgresql:postgresql")
+
+    compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
+    testCompileOnly("org.projectlombok:lombok")
+    testAnnotationProcessor("org.projectlombok:lombok")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-}
-kotlin {
-    jvmToolchain(21)
 }
 
 tasks.test {
