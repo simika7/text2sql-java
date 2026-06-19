@@ -8,6 +8,12 @@
   <a href="https://github.com/spring-ai-alibaba/DataAgent">参考项目</a>
 </p>
 
+> **起凡api：注册赠送25刀**
+>
+> 一站式 AI 编程 API 中转站，支持 Claude Code、Codex 等常用模型服务，提供稳定、高效、高性价比的调用体验，国内直连，无需魔法。
+>
+> [立即注册领取25刀额度](https://ai.jarcheng.top/register)
+
 ## 📌 快速导航
 
 - [项目介绍图](#-项目介绍图)
@@ -153,4 +159,3 @@ pnpm dev
 
 - 416765656（满）
 - 632067985
-
