@@ -4,7 +4,10 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@MapperScan("io.github.qifan777.server")
+@MapperScan({
+    "io.github.qifan777.server.dataset.scheme.mapper",
+    "io.github.qifan777.server.dataset.knowledge.mapper"
+})
 @SpringBootApplication
 public class ServerApplication {
 

@@ -5,7 +5,7 @@
 - Backend port: `9933`
 - Spring application name: `data-agent`
 - Runtime language before migration: Kotlin on Java 21
-- Target backend shell for this migration slice: Java 21 with Spring Boot
+- Target backend shell for this migration slice: Java 21 with Spring Boot and Maven
 - Database: PostgreSQL
 - Primary datasource config path: `spring.datasource`
 - Vector store: Spring AI pgvector
@@ -46,7 +46,7 @@ The migration replacement should expose OpenAPI through springdoc:
 
 ## Baseline Test Result
 
-Command attempted from `data-agent-backend` on 2026-06-18:
+Command attempted from `data-agent-backend` on 2026-06-18 before switching to Maven:
 
 ```powershell
 .\gradlew.bat test
@@ -62,3 +62,14 @@ java.lang.ClassNotFoundException: org.gradle.wrapper.GradleWrapperMain
 ```
 
 Observed cause: `data-agent-backend/gradle` contains no wrapper JAR files, so `gradlew.bat` cannot load `org.gradle.wrapper.GradleWrapperMain`.
+
+## Maven Migration Note
+
+The backend build has been switched from Gradle to Maven because the committed Gradle wrapper is incomplete. Use these commands for later migration phases:
+
+```powershell
+mvn test
+mvn spring-boot:run
+```
+
+On 2026-06-24, this machine did not have `mvn` on `PATH`, so Maven verification requires installing Maven or adding a Maven runtime to the environment.
