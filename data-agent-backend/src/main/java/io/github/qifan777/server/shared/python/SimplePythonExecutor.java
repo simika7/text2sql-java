@@ -4,6 +4,9 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public final class SimplePythonExecutor {
@@ -77,21 +80,49 @@ public final class SimplePythonExecutor {
         }
     }
 
-    private static PythonExecutionResult runCommand(List<String> command, File inputFile, long timeoutSec) throws Exception {
+    static PythonExecutionResult runCommand(List<String> command, File inputFile, long timeoutSec) throws Exception {
         Process process = new ProcessBuilder(command)
                 .redirectInput(inputFile)
                 .start();
 
+        ExecutorService streamReaders = Executors.newFixedThreadPool(2);
+        CompletableFuture<String> stdout = readStreamAsync(process.getInputStream(), streamReaders);
+        CompletableFuture<String> stderr = readStreamAsync(process.getErrorStream(), streamReaders);
+
         boolean completed = process.waitFor(timeoutSec, TimeUnit.SECONDS);
         if (!completed) {
             process.destroyForcibly();
+            process.waitFor(5, TimeUnit.SECONDS);
+            closeQuietly(process.getInputStream());
+            closeQuietly(process.getErrorStream());
+            closeQuietly(process.getOutputStream());
+            streamReaders.shutdownNow();
             return new PythonExecutionResult(false, "", "Execution timed out after " + timeoutSec + " seconds.");
         }
 
         int exitCode = process.exitValue();
-        String stdout = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
-        String stderr = new String(process.getErrorStream().readAllBytes(), StandardCharsets.UTF_8).trim();
-        return new PythonExecutionResult(exitCode == 0, stdout, stderr);
+        try {
+            return new PythonExecutionResult(exitCode == 0, stdout.get().trim(), stderr.get().trim());
+        } finally {
+            streamReaders.shutdownNow();
+        }
+    }
+
+    private static CompletableFuture<String> readStreamAsync(java.io.InputStream inputStream, ExecutorService executor) {
+        return CompletableFuture.supplyAsync(() -> {
+            try (inputStream) {
+                return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }, executor);
+    }
+
+    private static void closeQuietly(java.io.Closeable closeable) {
+        try {
+            closeable.close();
+        } catch (Exception ignored) {
+        }
     }
 
     private static boolean isDockerAvailable() {

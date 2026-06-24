@@ -51,7 +51,7 @@ public class Schema {
 
     public String buildSchemePrompt(SchemaDataSourceProvider dataSourceProvider) {
         StringBuilder schemeBuilder = new StringBuilder();
-        schemeBuilder.append("【DB_ID】").append(databaseId).append('\n');
+        schemeBuilder.append("【DB_ID】 ").append(databaseId).append('\n');
         for (DbTableSchemaView dbTable : nullToEmpty(dbTables)) {
             schemeBuilder.append(buildTablePrompt(dbTable, dataSourceProvider));
         }
@@ -86,7 +86,7 @@ public class Schema {
                 builder.append("primaryKey, ");
             }
             List<String> examples = examplesByColumn.getOrDefault(columnDto.getName(), List.of());
-            builder.append("Examples: [").append(String.join(", ", examples)).append("]),\n");
+            builder.append("Examples: [").append(examples).append("]),\n");
         }
         builder.append("]\n");
         return builder.toString();

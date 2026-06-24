@@ -12,8 +12,11 @@ import io.github.qifan777.server.dataset.scheme.dto.DbTableSchemaView;
 import io.github.qifan777.server.shared.datasource.ResultSetBuilder;
 import io.github.qifan777.server.shared.json.JsonUtil;
 import org.junit.jupiter.api.Test;
+import org.sqlite.SQLiteDataSource;
 import org.springframework.ai.document.Document;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -75,13 +78,39 @@ class JavaMigrationSliceTest {
 
         assertThat(foreignKey.toExpression()).isEqualTo("orders.customer_id = customers.id");
         assertThat(schema.buildSchemePrompt())
-                .startsWith("【DB_ID】db1\n")
+                .startsWith("【DB_ID】 db1\n")
                 .contains("# Table: orders")
                 .contains("(id: INTEGER")
                 .contains("primaryKey")
                 .contains("]\n【Foreign keys】\norders.customer_id = customers.id")
                 .contains("orders.customer_id = customers.id");
         assertThat(schema.toJson()).contains("\"databaseId\":\"db1\"");
+    }
+
+    @Test
+    void schemaTablePromptRendersSampleExamplesUsingListStringShape() throws Exception {
+        Path sqliteFile = Files.createTempFile("schema-examples-", ".sqlite");
+        SQLiteDataSource dataSource = new SQLiteDataSource();
+        dataSource.setUrl("jdbc:sqlite:" + sqliteFile);
+        try (Connection connection = dataSource.getConnection();
+             Statement statement = connection.createStatement()) {
+            statement.execute("CREATE TABLE orders (status TEXT)");
+            statement.execute("INSERT INTO orders (status) VALUES ('a')");
+            statement.execute("INSERT INTO orders (status) VALUES ('b')");
+        }
+
+        DbTableSchemaView orders = new DbTableSchemaView(
+                "orders",
+                List.of(new DbColumnSchemaView("status", "TEXT", "order status", false))
+        );
+        Schema schema = new Schema("db1", List.of(orders), List.of(), true);
+
+        try {
+            assertThat(schema.buildTablePrompt(orders, ignored -> dataSource))
+                    .contains("Examples: [[a, b]]");
+        } finally {
+            Files.deleteIfExists(sqliteFile);
+        }
     }
 
     @Test
