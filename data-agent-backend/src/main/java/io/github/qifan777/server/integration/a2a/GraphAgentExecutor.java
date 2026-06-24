@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
@@ -47,6 +48,7 @@ public class GraphAgentExecutor implements AgentExecutor {
     public void execute(RequestContext context, EventQueue eventQueue) {
         TaskUpdater taskUpdater = new TaskUpdater(context, eventQueue);
         AtomicInteger artifactNum = new AtomicInteger();
+        AtomicBoolean workStarted = new AtomicBoolean(false);
 
         try {
             CompiledGraph compiledGraph = stateGraph.compile(CompileConfig.builder()
@@ -74,6 +76,7 @@ public class GraphAgentExecutor implements AgentExecutor {
                         stateUpdate
                 );
                 taskUpdater.startWork();
+                workStarted.set(true);
                 compiledGraph.stream(null, resumedConfig)
                         .doOnNext(nodeOutput -> handleNodeOutput(taskUpdater, artifactNum, nodeOutput))
                         .doOnComplete(() -> onComplete(compiledGraph, taskUpdater, runnableConfig))
@@ -98,12 +101,19 @@ public class GraphAgentExecutor implements AgentExecutor {
             );
 
             taskUpdater.startWork();
+            workStarted.set(true);
             compiledGraph.stream(graphInput, runnableConfig)
                     .doOnNext(nodeOutput -> handleNodeOutput(taskUpdater, artifactNum, nodeOutput))
                     .doOnComplete(() -> onComplete(compiledGraph, taskUpdater, runnableConfig))
                     .blockLast();
-        } catch (Throwable throwable) {
-            throw new InternalError(throwable.getMessage());
+        } catch (Exception exception) {
+            if (exception instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            if (workStarted.get()) {
+                taskUpdater.fail();
+            }
+            throw new InternalError(exception.getMessage());
         }
     }
 
@@ -173,7 +183,10 @@ public class GraphAgentExecutor implements AgentExecutor {
     }
 
     private void onComplete(CompiledGraph compiledGraph, TaskUpdater taskUpdater, RunnableConfig runnableConfig) {
-        if (Objects.equals(compiledGraph.getState(runnableConfig).next(), DataAgentSpec.Graph.Node.INTERRUPT_NODE)) {
+        String nextNode = compiledGraph.stateOf(runnableConfig)
+                .map(stateSnapshot -> stateSnapshot.next())
+                .orElse(null);
+        if (Objects.equals(nextNode, DataAgentSpec.Graph.Node.INTERRUPT_NODE)) {
             taskUpdater.requiresInput();
             return;
         }
@@ -186,7 +199,8 @@ public class GraphAgentExecutor implements AgentExecutor {
     }
 
     private String firstText(Message message) {
-        return message.getParts().stream()
+        List<?> parts = message.getParts() == null ? List.of() : message.getParts();
+        return parts.stream()
                 .filter(TextPart.class::isInstance)
                 .map(TextPart.class::cast)
                 .map(TextPart::getText)

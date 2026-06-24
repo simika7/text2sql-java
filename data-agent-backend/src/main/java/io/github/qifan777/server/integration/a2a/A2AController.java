@@ -38,6 +38,7 @@ import io.a2a.transport.jsonrpc.handler.JSONRPCHandler;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.http.HttpServletRequest;
 import org.reactivestreams.FlowAdapters;
+import reactor.core.Disposable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -55,6 +56,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Flow;
+import java.util.concurrent.atomic.AtomicReference;
 
 @RestController
 public class A2AController {
@@ -129,11 +131,23 @@ public class A2AController {
             Flux<? extends JSONRPCResponse<?>> flux = streamingResponse == null
                     ? Flux.just(new JSONRPCErrorResponse(new InternalError("Streaming response is null")))
                     : streamingResponse;
-            flux.subscribe(
+            AtomicReference<Disposable> subscription = new AtomicReference<>();
+            Runnable disposeSubscription = () -> {
+                Disposable disposable = subscription.get();
+                if (disposable != null && !disposable.isDisposed()) {
+                    disposable.dispose();
+                }
+            };
+            emitter.onCompletion(disposeSubscription);
+            emitter.onTimeout(disposeSubscription);
+            emitter.onError(exception -> disposeSubscription.run());
+
+            subscription.set(flux.subscribe(
                     response -> {
                         try {
                             emitter.send(SseEmitter.event().data(Utils.toJsonString(response)));
                         } catch (Exception exception) {
+                            disposeSubscription.run();
                             emitter.completeWithError(exception);
                         }
                     },
@@ -142,7 +156,7 @@ public class A2AController {
                         emitter.completeWithError(exception);
                     },
                     emitter::complete
-            );
+            ));
             return emitter;
         }
 

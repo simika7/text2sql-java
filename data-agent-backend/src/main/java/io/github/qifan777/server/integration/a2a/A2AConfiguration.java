@@ -77,6 +77,11 @@ public class A2AConfiguration {
         return timeout;
     }
 
+    @Bean(destroyMethod = "shutdown")
+    public ExecutorService a2aExecutorService() {
+        return Executors.newFixedThreadPool(5);
+    }
+
     @Bean
     public JSONRPCHandler jsonRpcHandler(
             AgentCard agentCard,
@@ -84,17 +89,17 @@ public class A2AConfiguration {
             TaskStore taskStore,
             QueueManager queueManager,
             PushNotificationConfigStore pushNotificationConfigStore,
-            PushNotificationSender pushNotificationSender
+            PushNotificationSender pushNotificationSender,
+            ExecutorService a2aExecutorService
     ) {
-        ExecutorService pool = Executors.newFixedThreadPool(5);
         DefaultRequestHandler requestHandler = DefaultRequestHandler.create(
                 agentExecutor,
                 taskStore,
                 queueManager,
                 pushNotificationConfigStore,
                 pushNotificationSender,
-                pool
+                a2aExecutorService
         );
-        return new JSONRPCHandler(agentCard, requestHandler, pool);
+        return new JSONRPCHandler(agentCard, requestHandler, a2aExecutorService);
     }
 }
