@@ -1,78 +1,134 @@
 /* eslint-env node */
-import http from 'http'
-import fs from 'fs'
-import fse from 'fs-extra'
-import { v4 as uuidv4 } from 'uuid'
-import os from 'os'
-import path from 'path'
-import AdmZip from 'adm-zip'
-const sourceUrl = 'http://localhost:9933/ts.zip'
-const tmpFilePath = os.tmpdir() + '/' + uuidv4() + '.zip'
-const generatePath = 'src/apis/__generated'
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 
-console.log('Downloading ' + sourceUrl + '...')
+import { generate } from 'openapi-typescript-codegen'
 
-const tmpFile = fs.createWriteStream(tmpFilePath)
-http.get(sourceUrl, (response) => {
-  response.pipe(tmpFile)
-  tmpFile.on('finish', () => {
-    tmpFile.close()
-    console.log('File save success: ', tmpFilePath)
+const DEFAULT_OPENAPI_URL = 'http://localhost:9933/v3/api-docs'
+const GENERATED_PATH = path.resolve('src/apis/__generated')
+const AGENT_METHOD_NAME = 'agentJson'
 
-    // Remove generatePath if it exists
-    if (fs.existsSync(generatePath)) {
-      console.log('Removing existing generatePath...')
-      fse.removeSync(generatePath)
-      console.log('Existing generatePath removed.')
+export async function resolveOpenApiInput(openApiUrl) {
+  if (!/^https?:\/\//i.test(openApiUrl)) {
+    return {
+      input: openApiUrl,
+      cleanup: async () => {},
     }
+  }
 
-    // Unzip the file using adm-zip
-    console.log('Unzipping the file...')
-    const zip = new AdmZip(tmpFilePath)
-    zip.extractAllTo(generatePath, true)
-    console.log('File unzipped successfully.')
-    // Remove the temporary file
-    console.log('Removing temporary file...')
-    fs.unlink(tmpFilePath, (err) => {
-      if (err) {
-        console.error('Error while removing temporary file:', err)
-      } else {
-        console.log('Temporary file removed.')
-      }
-    })
-    traverseDirectory(modelPath)
-    traverseDirectory(servicePath)
-  })
-})
+  let response
+  try {
+    response = await fetch(openApiUrl)
+  } catch (error) {
+    throw new Error(`Failed to download OpenAPI document from ${openApiUrl}`, { cause: error })
+  }
+  if (!response.ok) {
+    throw new Error(`Failed to download OpenAPI document: ${response.status} ${response.statusText}`)
+  }
 
-// 替换目录路径
-const modelPath = 'src/apis/__generated/model'
-const servicePath = 'src/apis/__generated/services'
+  const tempPath = await mkdtemp(path.join(tmpdir(), 'springdoc-openapi-'))
+  const input = path.join(tempPath, 'openapi.json')
+  await writeFile(input, await response.text(), 'utf8')
 
-// 递归遍历目录中的所有文件
-function traverseDirectory(directoryPath) {
-  const files = fs.readdirSync(directoryPath)
-
-  files.forEach((file) => {
-    const filePath = path.join(directoryPath, file)
-    const stats = fs.statSync(filePath)
-
-    if (stats.isDirectory()) {
-      traverseDirectory(filePath)
-    } else if (stats.isFile() && path.extname(filePath) === '.ts') {
-      replaceInFile(filePath)
-    }
-  })
+  return {
+    input,
+    cleanup: async () => {
+      await rm(tempPath, { force: true, recursive: true })
+    },
+  }
 }
 
-// 替换文件中的文本
-function replaceInFile(filePath) {
-  const fileContent = fs.readFileSync(filePath, 'utf8')
-  const updatedContent = fileContent
-    .replaceAll('readonly ', '')
-    .replace(/ReadonlyArray/g, 'Array')
-    .replaceAll('ReadonlyMap', 'Map')
-    .replace(/Map<(\S+), (\S+)>/g, '{ [key: $1]: $2 }')
-  // .replace(/query: (\S+)/g, 'query: T')
-  fs.writeFileSync(filePath, updatedContent, 'utf8')
+export async function findServiceWithMethod(generatedPath, methodName) {
+  const servicesPath = path.join(generatedPath, 'services')
+  const entries = await readdir(servicesPath, { withFileTypes: true })
+
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith('.ts')) {
+      continue
+    }
+
+    const servicePath = path.join(servicesPath, entry.name)
+    const source = await readFile(servicePath, 'utf8')
+    const methodPattern = new RegExp(`\\bstatic\\s+${methodName}\\s*\\(`)
+
+    if (!methodPattern.test(source)) {
+      continue
+    }
+
+    const classMatch = source.match(/export\s+class\s+([A-Za-z0-9_]+)/)
+    if (!classMatch) {
+      throw new Error(`Found ${methodName} in ${servicePath}, but could not find its service class`)
+    }
+
+    return {
+      className: classMatch[1],
+      importPath: `./services/${path.basename(entry.name, '.ts')}`,
+    }
+  }
+
+  throw new Error(`Could not find generated service method "${methodName}" in ${servicesPath}`)
+}
+
+export function buildApiCompatSource(agentService) {
+  return [
+    `import { ${agentService.className} } from '${agentService.importPath}'`,
+    '',
+    'type LegacyRequestExecutor = (request: {',
+    '  uri: string',
+    '  method: string',
+    '  body?: unknown',
+    '}) => unknown',
+    '',
+    'export class Api {',
+    '  constructor(_request?: LegacyRequestExecutor) {}',
+    '',
+    '  readonly a2acontroller = {',
+    `    ${AGENT_METHOD_NAME}: () => ${agentService.className}.${AGENT_METHOD_NAME}(),`,
+    '  }',
+    '}',
+    '',
+  ].join('\n')
+}
+
+async function writeApiCompat(generatedPath) {
+  const agentService = await findServiceWithMethod(generatedPath, AGENT_METHOD_NAME)
+  const compatPath = path.join(generatedPath, 'Api.ts')
+  const indexPath = path.join(generatedPath, 'index.ts')
+  const indexSource = await readFile(indexPath, 'utf8')
+
+  await writeFile(compatPath, buildApiCompatSource(agentService), 'utf8')
+
+  if (!indexSource.includes("export { Api } from './Api'")) {
+    await writeFile(indexPath, `${indexSource.trimEnd()}\nexport { Api } from './Api'\n`, 'utf8')
+  }
+}
+
+export async function generateApi() {
+  const openApiUrl = process.env.OPENAPI_URL || DEFAULT_OPENAPI_URL
+  const openApiInput = await resolveOpenApiInput(openApiUrl)
+
+  console.log(`Generating API client from ${openApiUrl}...`)
+  try {
+    await rm(GENERATED_PATH, { force: true, recursive: true })
+    await generate({
+      input: openApiInput.input,
+      output: GENERATED_PATH,
+      httpClient: 'fetch',
+      useOptions: true,
+      useUnionTypes: true,
+    })
+    await writeApiCompat(GENERATED_PATH)
+    console.log(`API client generated at ${GENERATED_PATH}`)
+  } finally {
+    await openApiInput.cleanup()
+  }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  generateApi().catch((error) => {
+    console.error(error)
+    process.exitCode = 1
+  })
 }
