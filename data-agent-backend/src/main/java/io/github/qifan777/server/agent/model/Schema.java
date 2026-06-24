@@ -51,14 +51,14 @@ public class Schema {
 
     public String buildSchemePrompt(SchemaDataSourceProvider dataSourceProvider) {
         StringBuilder schemeBuilder = new StringBuilder();
-        schemeBuilder.append("銆怐B_ID銆?").append(databaseId).append('\n');
+        schemeBuilder.append("【DB_ID】").append(databaseId).append('\n');
         for (DbTableSchemaView dbTable : nullToEmpty(dbTables)) {
             schemeBuilder.append(buildTablePrompt(dbTable, dataSourceProvider));
         }
         String keys = String.join("\n", nullToEmpty(dbForeignKeys).stream()
                 .map(DbForeignKeySchemaView::toExpression)
                 .toList());
-        schemeBuilder.append("銆怓oreign keys銆慭n").append(keys);
+        schemeBuilder.append("【Foreign keys】\n").append(keys);
         log.info("scheme prompt {}", schemeBuilder);
         return schemeBuilder.toString();
     }

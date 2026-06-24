@@ -3,12 +3,16 @@ package io.github.qifan777.server.agent;
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.github.qifan777.server.agent.model.Schema;
 import io.github.qifan777.server.agent.model.SqlResultSet;
+import io.github.qifan777.server.dataset.knowledge.domain.QuestionKnowledge;
+import io.github.qifan777.server.dataset.scheme.domain.DbColumn;
+import io.github.qifan777.server.dataset.scheme.domain.DbTable;
 import io.github.qifan777.server.dataset.scheme.dto.DbColumnSchemaView;
 import io.github.qifan777.server.dataset.scheme.dto.DbForeignKeySchemaView;
 import io.github.qifan777.server.dataset.scheme.dto.DbTableSchemaView;
 import io.github.qifan777.server.shared.datasource.ResultSetBuilder;
 import io.github.qifan777.server.shared.json.JsonUtil;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.document.Document;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -71,12 +75,47 @@ class JavaMigrationSliceTest {
 
         assertThat(foreignKey.toExpression()).isEqualTo("orders.customer_id = customers.id");
         assertThat(schema.buildSchemePrompt())
-                .contains("db1")
+                .startsWith("【DB_ID】db1\n")
                 .contains("# Table: orders")
                 .contains("(id: INTEGER")
                 .contains("primaryKey")
+                .contains("]\n【Foreign keys】\norders.customer_id = customers.id")
                 .contains("orders.customer_id = customers.id");
         assertThat(schema.toJson()).contains("\"databaseId\":\"db1\"");
+    }
+
+    @Test
+    void documentExtensionsPreserveQuestionKnowledgeConversion() {
+        UUID id = UUID.randomUUID();
+        QuestionKnowledge knowledge = new QuestionKnowledge(id, "db1", "How many orders?", "42");
+
+        Document document = DocumentExtensions.toDocument(knowledge);
+
+        assertThat(document.getText()).isEqualTo("How many orders?");
+        assertThat(document.getMetadata())
+                .containsEntry(DataAgentSpec.Retrieval.DocumentMetadataKey.VECTOR_TYPE,
+                        DataAgentSpec.Retrieval.VectorType.QUESTION_KNOWLEDGE)
+                .containsEntry(DataAgentSpec.Retrieval.DocumentMetadataKey.KNOWLEDGE_ID, id)
+                .containsEntry(DataAgentSpec.Retrieval.DocumentMetadataKey.DATABASE_ID, "db1")
+                .doesNotContainKey("questionId");
+    }
+
+    @Test
+    void documentExtensionsPreserveDbColumnConversion() {
+        UUID tableId = UUID.randomUUID();
+        UUID columnId = UUID.randomUUID();
+        DbTable table = new DbTable(tableId, "orders", "orders table", "db1", List.of());
+        DbColumn column = new DbColumn(columnId, "customer_id", "INTEGER", "customer id", false, UUID.randomUUID(), table);
+
+        Document document = DocumentExtensions.toDocument(column);
+
+        assertThat(document.getText()).isEqualTo("customer id");
+        assertThat(document.getMetadata())
+                .containsEntry(DataAgentSpec.Retrieval.DocumentMetadataKey.VECTOR_TYPE,
+                        DataAgentSpec.Retrieval.VectorType.COLUMN)
+                .containsEntry(DataAgentSpec.Retrieval.DocumentMetadataKey.DATABASE_ID, "db1")
+                .containsEntry(DataAgentSpec.Retrieval.DocumentMetadataKey.TABLE_ID, tableId)
+                .containsEntry(DataAgentSpec.Retrieval.DocumentMetadataKey.COLUMN_ID, columnId);
     }
 
     @Test
