@@ -20,7 +20,7 @@ import java.util.UUID;
 public class DbColumn {
 
     @TableId(type = IdType.INPUT)
-    private UUID id;
+    private UUID id = UUID.randomUUID();
 
     private String name;
 

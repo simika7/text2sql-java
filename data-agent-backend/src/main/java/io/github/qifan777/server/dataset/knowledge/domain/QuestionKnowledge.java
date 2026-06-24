@@ -19,7 +19,7 @@ import java.util.UUID;
 public class QuestionKnowledge {
 
     @TableId(type = IdType.INPUT)
-    private UUID id;
+    private UUID id = UUID.randomUUID();
 
     private String databaseId;
 

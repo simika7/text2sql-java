@@ -17,7 +17,7 @@ import java.util.UUID;
 public class DbForeignKey {
 
     @TableId(type = IdType.INPUT)
-    private UUID id;
+    private UUID id = UUID.randomUUID();
 
     private UUID sourceColumnId;
 
