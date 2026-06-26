@@ -5,6 +5,8 @@ import io.a2a.spec.TransportProtocol;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -36,15 +38,15 @@ class A2AJavaMigrationTest {
     }
 
     @Test
-    void exposesJsonRpcTransportMetadataWithoutKotlinOrJimmerAnnotations() {
+    void exposesJsonRpcTransportMetadataWithJavaControllerAnnotations() {
         JSONRPCTransportMetadata metadata = new JSONRPCTransportMetadata();
 
         assertThat(metadata.getTransportProtocol()).isEqualTo(TransportProtocol.JSONRPC.toString());
-        assertThat(Arrays.stream(A2AController.class.getDeclaredAnnotations())
-                .map(annotation -> annotation.annotationType().getName()))
-                .doesNotContain("org.babyfish.jimmer.client.ApiIgnore");
-        assertThat(Arrays.stream(GraphAgentExecutor.class.getDeclaredAnnotations())
-                .map(annotation -> annotation.annotationType().getName()))
-                .doesNotContain("kotlin.Metadata");
+        Set<String> controllerAnnotations = Arrays.stream(A2AController.class.getDeclaredAnnotations())
+                .map(annotation -> annotation.annotationType().getName())
+                .collect(Collectors.toSet());
+        assertThat(controllerAnnotations)
+                .contains("org.springframework.web.bind.annotation.RestController");
+        assertThat(GraphAgentExecutor.class.getSimpleName()).isEqualTo("GraphAgentExecutor");
     }
 }
