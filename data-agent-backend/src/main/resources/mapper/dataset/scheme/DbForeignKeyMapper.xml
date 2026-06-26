@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.github.qifan777.server.dataset.scheme.mapper.DbForeignKeyMapper">
+
+    <resultMap id="DbForeignKeyWithColumnsResult" type="io.github.qifan777.server.dataset.scheme.domain.DbForeignKey">
+        <id column="fk_id" property="id"/>
+        <result column="source_column_id" property="sourceColumnId"/>
+        <result column="target_column_id" property="targetColumnId"/>
+        <association property="sourceColumn" javaType="io.github.qifan777.server.dataset.scheme.domain.DbColumn">
+            <id column="source_id" property="id"/>
+            <result column="source_name" property="name"/>
+            <result column="source_type" property="type"/>
+            <result column="source_description" property="description"/>
+            <result column="source_is_primary_key" property="isPrimaryKey"/>
+            <result column="source_table_id" property="tableId"/>
+            <association property="dbTable" javaType="io.github.qifan777.server.dataset.scheme.domain.DbTable">
+                <id column="source_table_id" property="id"/>
+                <result column="source_table_name" property="name"/>
+                <result column="source_table_description" property="description"/>
+                <result column="source_database_id" property="databaseId"/>
+            </association>
+        </association>
+        <association property="targetColumn" javaType="io.github.qifan777.server.dataset.scheme.domain.DbColumn">
+            <id column="target_id" property="id"/>
+            <result column="target_name" property="name"/>
+            <result column="target_type" property="type"/>
+            <result column="target_description" property="description"/>
+            <result column="target_is_primary_key" property="isPrimaryKey"/>
+            <result column="target_table_id" property="tableId"/>
+            <association property="dbTable" javaType="io.github.qifan777.server.dataset.scheme.domain.DbTable">
+                <id column="target_table_id" property="id"/>
+                <result column="target_table_name" property="name"/>
+                <result column="target_table_description" property="description"/>
+                <result column="target_database_id" property="databaseId"/>
+            </association>
+        </association>
+    </resultMap>
+
+    <select id="selectByDatabaseId" resultMap="DbForeignKeyWithColumnsResult">
+        select
+            fk.id as fk_id,
+            fk.source_column_id,
+            fk.target_column_id,
+            sc.id as source_id,
+            sc.name as source_name,
+            sc.type as source_type,
+            sc.description as source_description,
+            sc.is_primary_key as source_is_primary_key,
+            sc.table_id as source_table_id,
+            st.name as source_table_name,
+            st.description as source_table_description,
+            st.database_id as source_database_id,
+            tc.id as target_id,
+            tc.name as target_name,
+            tc.type as target_type,
+            tc.description as target_description,
+            tc.is_primary_key as target_is_primary_key,
+            tc.table_id as target_table_id,
+            tt.name as target_table_name,
+            tt.description as target_table_description,
+            tt.database_id as target_database_id
+        from db_foreign_key fk
+        join db_column sc on sc.id = fk.source_column_id
+        join db_table st on st.id = sc.table_id
+        join db_column tc on tc.id = fk.target_column_id
+        join db_table tt on tt.id = tc.table_id
+        where st.database_id = #{databaseId}
+        order by st.name, sc.name, tt.name, tc.name
+    </select>
+</mapper>

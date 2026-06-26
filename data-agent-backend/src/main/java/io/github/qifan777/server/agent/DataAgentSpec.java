@@ -1,0 +1,156 @@
+package io.github.qifan777.server.agent;
+
+import com.alibaba.cloud.ai.graph.OverAllState;
+
+public final class DataAgentSpec {
+
+    public static final String GRAPH_NAME = "data-agent-main-graph";
+
+    private DataAgentSpec() {
+    }
+
+    public static final class Graph {
+        private Graph() {
+        }
+
+        public static String stringValue(OverAllState state, String key) {
+            return state.<String>value(key).orElseThrow(() -> new IllegalStateException("State key not found: " + key));
+        }
+
+        public static final class Node {
+            public static final String EVIDENCE_RECALL = "EVIDENCE_RECALL_NODE";
+            public static final String SCHEMA_RECALL = "SCHEME_RECALL_NODE";
+            public static final String TABLE_RELATION = "TABLE_RELATION_NODE";
+            public static final String FEASIBILITY_ASSESSMENT = "FEASIBILITY_ASSESSMENT_NODE";
+            public static final String PLANNER = "PLANNER_NODE";
+            public static final String HUMAN_FEEDBACK = "HUMAN_FEEDBACK_NODE";
+            public static final String PLAN_EXECUTION = "PLAN_EXECUTE_NODE";
+            public static final String SQL_GENERATION = "SQL_GENERATE_NODE";
+            public static final String SQL_EXECUTION = "SQL_EXECUTE_NODE";
+            public static final String PYTHON_GENERATION = "PYTHON_GENERATE_NODE";
+            public static final String PYTHON_EXECUTION = "PYTHON_EXECUTE_NODE";
+            public static final String PYTHON_ANALYSIS = "PYTHON_ANALYZE_NODE";
+            public static final String REPORT_GENERATION = "REPORT_GENERATOR_NODE";
+            public static final String INTERRUPT_NODE = HUMAN_FEEDBACK;
+
+            private Node() {
+            }
+        }
+
+        public static final class StateKey {
+            private StateKey() {
+            }
+
+            public static final class Input {
+                public static final String USER_INPUT = "input";
+                public static final String DATABASE_ID = "databaseId";
+                public static final String MULTI_TURN_CONTEXT = "MULTI_TURN_CONTEXT";
+
+                private Input() {
+                }
+            }
+
+            public static final class Recall {
+                public static final String REWRITE_QUERY = "REWRITE_QUERY";
+                public static final String EVIDENCE = "EVIDENCE";
+                public static final String COLUMN_SCHEMA = "COLUMN_SCHEME";
+                public static final String TABLE_SCHEMA = "TABLE_SCHEME";
+                public static final String TABLE_RELATION = "TABLE_RELATION_OUTPUT";
+
+                private Recall() {
+                }
+            }
+
+            public static final class Planning {
+                public static final String PLAN = "PLANNER_NODE_OUTPUT";
+                public static final String REPAIR_COUNT = "PLAN_REPAIR_COUNT";
+                public static final String NEXT_NODE = "PLAN_NEXT_NODE";
+                public static final String CURRENT_STEP = "PLAN_CURRENT_STEP";
+                public static final String EXECUTION_OUTPUT = "PLAN_EXECUTE_NODE_OUTPUT";
+
+                private Planning() {
+                }
+            }
+
+            public static final class HumanReview {
+                public static final String CONFIRMATION_APPROVED = "confirmationApproved";
+                public static final String CONFIRMATION_FEEDBACK = "confirmationFeedback";
+                public static final String NEXT_NODE = "HUMAN_NEXT_NODE";
+
+                private HumanReview() {
+                }
+            }
+
+            public static final class Execution {
+                public static final String FEASIBILITY_RESULT = "FEASIBILITY_ASSESSMENT_NODE_OUTPUT";
+                public static final String SQL_GENERATION_RESULT = "SQL_GENERATE_OUTPUT";
+                public static final String SQL_EXECUTION_RESULT = "SQL_EXECUTE_OUTPUT";
+                public static final String PYTHON_GENERATION_RESULT = "PYTHON_GENERATE_NODE_OUTPUT";
+                public static final String PYTHON_EXECUTION_RESULT = "PYTHON_EXECUTE_NODE_OUTPUT";
+                public static final String REPORT_RESULT = "REPORT_GENERATOR_NODE_OUTPUT";
+
+                private Execution() {
+                }
+            }
+        }
+    }
+
+    public static final class MessageMetadataKey {
+        public static final String DATABASE_ID = "databaseId";
+        public static final String CONFIRMATION_APPROVED = "confirmationApproved";
+        public static final String CONFIRMATION_FEEDBACK = "confirmationFeedback";
+
+        private MessageMetadataKey() {
+        }
+    }
+
+    public static final class Retrieval {
+        private Retrieval() {
+        }
+
+        public static final class DocumentMetadataKey {
+            public static final String TABLE_ID = "tableId";
+            public static final String COLUMN_ID = "columnId";
+            public static final String KNOWLEDGE_ID = "knowledgeId";
+            public static final String DATABASE_ID = "databaseId";
+            public static final String BUSINESS_TERM_ID = "businessTermId";
+            public static final String VECTOR_TYPE = "vectorType";
+
+            private DocumentMetadataKey() {
+            }
+        }
+
+        public static final class VectorType {
+            public static final String QUESTION_KNOWLEDGE = "questionKnowledge";
+            public static final String GLOSSARY_KNOWLEDGE = "glossaryKnowledge";
+            public static final String COLUMN = "column";
+            public static final String TABLE = "table";
+
+            private VectorType() {
+            }
+        }
+    }
+
+    public static final class PromptName {
+        public static final String INTENT_RECOGNITION = "intent-recognition";
+        public static final String EVIDENCE_QUERY_REWRITE = "evidence-query-rewrite";
+        public static final String AGENT_KNOWLEDGE = "agent-knowledge";
+        public static final String QUERY_ENHANCEMENT = "query-enhancement";
+        public static final String FEASIBILITY_ASSESSMENT = "feasibility-assessment";
+        public static final String MIX_SELECTOR = "mix-selector";
+        public static final String SEMANTIC_CONSISTENCY = "semantic-consistency";
+        public static final String SQL_GENERATION = "new-sql-generate";
+        public static final String PLANNER = "planner";
+        public static final String REPORT_GENERATION = "report-generator-plain";
+        public static final String SQL_ERROR_FIXER = "sql-error-fixer";
+        public static final String PYTHON_GENERATION = "python-generator";
+        public static final String PYTHON_ANALYSIS = "python-analyze";
+        public static final String BUSINESS_KNOWLEDGE = "business-knowledge";
+        public static final String SEMANTIC_MODEL = "semantic-model";
+        public static final String JSON_FIX = "json-fix";
+        public static final String DATA_VIEW_ANALYZE = "data-view-analyze";
+
+        private PromptName() {
+        }
+    }
+}

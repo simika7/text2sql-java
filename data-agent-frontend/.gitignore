@@ -37,4 +37,6 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
-/src/apis/
+/src/apis/*
+!/src/apis/__generated/
+!/src/apis/__generated/**

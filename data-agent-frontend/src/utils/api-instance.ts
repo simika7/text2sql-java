@@ -1,6 +1,5 @@
-import { Api } from '@/apis/__generated'
-import { request } from '@/utils/request'
+import { Api, OpenAPI } from '@/apis/__generated'
 
-export const api = new Api(async ({ uri, method, body }) => {
-  return await request({ url: uri, method, data: body })
-})
+OpenAPI.BASE = import.meta.env.VITE_API_PREFIX ?? ''
+
+export const api = new Api()
