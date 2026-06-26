@@ -5,7 +5,7 @@
 - Backend port: `9933`
 - Spring application name: `data-agent`
 - Runtime language before migration: Kotlin on Java 21
-- Target backend shell for this migration slice: Java 21 with Spring Boot and Maven
+- Target backend shell for this migration: Java 21 with Spring Boot and Maven
 - Database: PostgreSQL
 - Primary datasource config path: `spring.datasource`
 - Vector store: Spring AI pgvector
@@ -17,13 +17,13 @@
 - `GET /.well-known/agent-card.json`
 - `POST /a2a/jsonrpc`
 
-## Generated Endpoints Currently Provided By Jimmer
+## Generated Endpoints Previously Provided By Jimmer
 
 - `GET /ts.zip`
 - `GET /openapi`
 - `GET /openapi-ui`
 
-The migration replacement should expose OpenAPI through springdoc:
+The migration replacement exposes OpenAPI through springdoc:
 
 - `GET /v3/api-docs`
 - `GET /openapi-ui`
@@ -39,10 +39,9 @@ The migration replacement should expose OpenAPI through springdoc:
 
 ## Frontend Coupling
 
-- `data-agent-frontend/scripts/generate-api.js` currently downloads `http://localhost:9933/ts.zip`.
-- Generated frontend code is expected under `data-agent-frontend/src/apis/__generated`.
-- The replacement must provide generated TypeScript models/services from OpenAPI in a later migration phase.
-- Do not change frontend API generation in Phase 0 or Phase 1.
+- `data-agent-frontend/scripts/generate-api.js` generates from `OPENAPI_URL` or the default `http://localhost:9933/v3/api-docs`.
+- Generated frontend code is committed under `data-agent-frontend/src/apis/__generated` so a clean checkout can type-check and build.
+- Run `pnpm api` after backend API changes to refresh the generated client from springdoc.
 
 ## Baseline Test Result
 

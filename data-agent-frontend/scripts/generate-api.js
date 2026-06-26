@@ -9,6 +9,7 @@ import { generate } from 'openapi-typescript-codegen'
 const DEFAULT_OPENAPI_URL = 'http://localhost:9933/v3/api-docs'
 const GENERATED_PATH = path.resolve('src/apis/__generated')
 const AGENT_METHOD_NAME = 'agentJson'
+const AGENT_CARD_PATH = '/.well-known/agent-card.json'
 
 export async function resolveOpenApiInput(openApiUrl) {
   if (!/^https?:\/\//i.test(openApiUrl)) {
@@ -71,9 +72,10 @@ export async function findServiceWithMethod(generatedPath, methodName) {
   throw new Error(`Could not find generated service method "${methodName}" in ${servicesPath}`)
 }
 
-export function buildApiCompatSource(agentService) {
+export function buildApiCompatSource() {
   return [
-    `import { ${agentService.className} } from '${agentService.importPath}'`,
+    "import { OpenAPI } from './core/OpenAPI'",
+    "import { request as __request } from './core/request'",
     '',
     'type LegacyRequestExecutor = (request: {',
     '  uri: string',
@@ -85,7 +87,7 @@ export function buildApiCompatSource(agentService) {
     '  constructor(_request?: LegacyRequestExecutor) {}',
     '',
     '  readonly a2acontroller = {',
-    `    ${AGENT_METHOD_NAME}: () => ${agentService.className}.${AGENT_METHOD_NAME}(),`,
+    `    ${AGENT_METHOD_NAME}: () => __request(OpenAPI, { method: 'GET', url: '${AGENT_CARD_PATH}' }),`,
     '  }',
     '}',
     '',
@@ -93,12 +95,12 @@ export function buildApiCompatSource(agentService) {
 }
 
 async function writeApiCompat(generatedPath) {
-  const agentService = await findServiceWithMethod(generatedPath, AGENT_METHOD_NAME)
+  await findServiceWithMethod(generatedPath, AGENT_METHOD_NAME)
   const compatPath = path.join(generatedPath, 'Api.ts')
   const indexPath = path.join(generatedPath, 'index.ts')
   const indexSource = await readFile(indexPath, 'utf8')
 
-  await writeFile(compatPath, buildApiCompatSource(agentService), 'utf8')
+  await writeFile(compatPath, buildApiCompatSource(), 'utf8')
 
   if (!indexSource.includes("export { Api } from './Api'")) {
     await writeFile(indexPath, `${indexSource.trimEnd()}\nexport { Api } from './Api'\n`, 'utf8')
