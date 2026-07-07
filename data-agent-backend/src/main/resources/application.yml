@@ -33,6 +33,7 @@ spring:
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   type-aliases-package: io.github.qifan777.server
+  type-handlers-package: io.github.qifan777.server.shared.mybatis
   configuration:
     map-underscore-to-camel-case: true
   global-config:
