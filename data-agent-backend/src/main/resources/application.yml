@@ -3,23 +3,27 @@ server:
 spring:
   application:
     name: data-agent
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
   profiles:
     active: private
   datasource:
     url: jdbc:postgresql://localhost:5432/data_agent_tutorial
-    username:
-    password:
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
   ai:
     openai:
-      base-url: openai协议baseurl(不带v1)，例如 https://dashscope.aliyuncs.com/compatible-mode
-      api-key:
+      base-url: ${OPENAI_BASE_URL:}
+      api-key: ${OPENAI_API_KEY:}
       chat:
         options:
-          model:
+          model: ${OPENAI_CHAT_MODEL:}
       embedding:
         options:
-          model: text-embedding-v4（阿里的）
+          model: ${OPENAI_EMBEDDING_MODEL:text-embedding-v4}
     vectorstore:
       pgvector:
         index-type: HNSW      # 2026 年主流的高性能索引
