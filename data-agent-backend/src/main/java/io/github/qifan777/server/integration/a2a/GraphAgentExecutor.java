@@ -22,6 +22,8 @@ import io.a2a.spec.TaskState;
 import io.a2a.spec.TaskStatus;
 import io.a2a.spec.TextPart;
 import io.github.qifan777.server.agent.DataAgentSpec;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -34,6 +36,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 public class GraphAgentExecutor implements AgentExecutor {
+
+    private static final Logger log = LoggerFactory.getLogger(GraphAgentExecutor.class);
 
     private final StateGraph stateGraph;
     private final TaskStore taskStore;
@@ -113,6 +117,7 @@ public class GraphAgentExecutor implements AgentExecutor {
             if (workStarted.get()) {
                 taskUpdater.fail();
             }
+            log.error("Graph execution failed", exception);
             throw new InternalError(exception.getMessage());
         }
     }
