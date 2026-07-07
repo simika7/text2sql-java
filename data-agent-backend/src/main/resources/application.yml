@@ -15,6 +15,14 @@ spring:
     password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
   ai:
+    model:
+      chat: openai
+      embedding: openai
+      image: none
+      audio:
+        speech: none
+        transcription: none
+      moderation: none
     openai:
       base-url: ${OPENAI_BASE_URL:}
       api-key: ${OPENAI_API_KEY:}
